@@ -1,24 +1,36 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import * as Notifications from 'expo-notifications';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+function useNotificationObserver() {
+  const router = useRouter();
 
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+  useEffect(() => {
+    function handleRedirect(notification: Notifications.Notification) {
+      const url = notification.request.content.data?.url;
+
+      if (typeof url === 'string') {
+        router.push(url as any);
+      }
+    }
+
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response?.notification) {
+        handleRedirect(response.notification);
+      }
+    });
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      response => {
+        handleRedirect(response.notification);
+      }
+    );
+
+    return () => subscription.remove();
+  }, []);
+}
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+  useNotificationObserver();
+  return <Stack />;
 }
